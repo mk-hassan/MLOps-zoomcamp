@@ -178,3 +178,4 @@ data
 mlruns
 models
 *.db
+model/
