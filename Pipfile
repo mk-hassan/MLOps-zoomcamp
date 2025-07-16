@@ -13,6 +13,10 @@ hyperopt = "*"
 xgboost = "*"
 fastparquet = "*"
 boto3 = "*"
+prefect = "*"
+evidently = "==0.7.10"
+psycopg = "==3.2.9"
+psycopg-binary = "==3.2.9"
 
 [dev-packages]
 
