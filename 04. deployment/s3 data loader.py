@@ -4,8 +4,7 @@ import requests
 import tempfile
 
 # Config
-s3_bucket_name = 'tyc-taxi'
-s3_prefix = 'nyc-taxi/green/'
+s3_bucket_name = 'tyc-taxi/green'
 year = 2022  # Change as needed
 months = range(1,13)  # Example: Jan–Mar
 
@@ -26,9 +25,9 @@ def download_parquet_file(year: int, month: int, save_dir: Path) -> Path:
     print(f"Saved to {local_path}")
     return local_path
 
-def upload_to_s3(local_path: Path, bucket: str, s3_key: str):
+def upload_to_s3(local_path: Path, bucket: str, object_name: str):
     print(f"Uploading {local_path} to s3://{bucket}")
-    client.upload_file(str(local_path), bucket, s3_key)
+    client.upload_file(str(local_path), bucket, object_name)
 
 def main():
     with tempfile.TemporaryDirectory() as tmp_dir_name:
@@ -36,7 +35,7 @@ def main():
 
         for month in months:
             local_file = download_parquet_file(year, month, tmp_dir)
-            upload_to_s3(local_file, s3_bucket_name, f"green/{month:0d}-{year:04d}.parquet")
+            upload_to_s3(local_file, s3_bucket_name, f"{month:0d}-{year:04d}.parquet")
 
 if __name__ == "__main__":
     main()

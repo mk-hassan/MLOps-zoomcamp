@@ -24,10 +24,8 @@ import pandas as pd
 
 from prefect import flow, task, runtime, get_run_logger
 
-from enums import TaxiType
-
 @task(retries=2, retry_delay_seconds=5)
-def load_data(month: int, year: int, taxi_type: TaxiType) -> pd.DataFrame:
+def load_data(month: int, year: int) -> pd.DataFrame:
     """
     Load and preprocess NYC taxi data for a given month and year from S3.
 
@@ -37,8 +35,6 @@ def load_data(month: int, year: int, taxi_type: TaxiType) -> pd.DataFrame:
         The month of the data (1-12).
     year : int
         The year of the data (e.g., 2022).
-    taxi_type : TaxiType
-        The type of taxi to load (e.g., "green").
 
     Returns
     -------
@@ -137,7 +133,7 @@ def save_predictions(result: pd.DataFrame, outfile: str):
     result.to_parquet(f"s3://tyc-taxi/predictions/green/{outfile}.parquet", index=False)
 
 @flow(name="batch-run", retries=3, retry_delay_seconds=5)
-def run(taxi_type: str, run_id: str, date: datetime | None = None) -> None:
+def run(run_id: str, date: datetime | None = None) -> None:
     logger = get_run_logger()
     if date is None:
         date = runtime.flow_run.scheduled_start_time
@@ -146,7 +142,7 @@ def run(taxi_type: str, run_id: str, date: datetime | None = None) -> None:
     year = prev_month.year
     month = prev_month.month 
 
-    data = load_data(month, year, taxi_type)
+    data = load_data(month, year)
     predictios = apply_model(run_id, data)
     result = build_output(data, predictios)
     save_predictions(result, f"{month}-{year}")
@@ -154,22 +150,14 @@ def run(taxi_type: str, run_id: str, date: datetime | None = None) -> None:
     logger.info("✅ Batch run completed successfully")
 
 def parse_args() -> dict:
-    accepted_taxi_type_values = [t.value for t in TaxiType]
     parser = argparse.ArgumentParser(description="Apply ML model to NYC taxi data")
     
     parser.add_argument("--month", type=int, required=True, help="Month of the trip data (1–12)")
     parser.add_argument("--year", type=int, required=True, help="Year of the trip data (e.g., 2023)")
-    parser.add_argument(
-        "--taxi-type",
-        type=lambda s: s.lower(),
-        choices=accepted_taxi_type_values,
-        required=True,
-        help="Taxi type: 'green' or 'yellow' (case-insensitive)"
-    )
     parser.add_argument("--run-id", type=str, required=True, help="MLflow run ID for the model to use")
 
     return vars(parser.parse_args())
 
 if __name__ == "__main__":
     args = parse_args()
-    run(args["taxi_type"], args["run_id"], datetime(day=1, month=args["month"], year=args["year"]))
+    run(args["run_id"], datetime(day=1, month=args["month"], year=args["year"]))
