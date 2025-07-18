@@ -1,0 +1,58 @@
+services:
+  grafana:
+    image: grafana/grafana:12.0.2-ubuntu
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
+      - ./config/grafana_dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./dashboards:/opt/grafana/dashboards
+      # - grafana-storage:/var/lib/grafana
+    networks:
+      - external-network
+      - internal-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=monitoring
+    volumes:
+      - postgres-storage:/var/lib/postgresql/data
+    networks:
+      - internal-network
+      - external-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - external-network
+      - internal-network
+
+networks:
+  external-network:
+    driver: bridge
+  internal-network:
+    driver: bridge
+    internal: true
+
+volumes:
+  # grafana-storage: 
+  postgres-storage: 
